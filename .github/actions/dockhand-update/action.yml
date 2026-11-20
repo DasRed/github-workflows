@@ -1,0 +1,27 @@
+name: Dockhand Update
+description: Update a Docker container via Dockhand API
+
+inputs:
+  host:
+    description: Dockhand server URL
+    required: true
+
+  environment:
+    description: Dockhand environment name
+    required: true
+
+  container_name:
+    description: Docker container name
+    required: true
+
+  image:
+    description: Full Docker image reference including tag
+    required: true
+
+  token:
+    description: Dockhand API token
+    required: true
+
+runs:
+  using: node24
+  main: update.mjs

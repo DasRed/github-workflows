@@ -1,0 +1,19 @@
+name: Home Assistant Notification
+description: Send GitHub Actions results to Home Assistant
+
+inputs:
+  webhook_url:
+    description: Home Assistant webhook URL
+    required: true
+
+  job_results:
+    description: GitHub Actions needs context as JSON
+    required: true
+
+  github_token:
+    description: Token to retrieve commit information
+    required: false
+
+runs:
+  using: node24
+  main: notify.mjs

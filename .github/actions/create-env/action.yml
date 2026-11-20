@@ -1,0 +1,23 @@
+name: Create .env
+description: Generate .env from GitHub Secrets
+
+inputs:
+  variables:
+    description: list of variable names from secret, separated by comma
+    required: false
+    default: ''
+
+  secrets:
+    description: JSON object containing the secret values
+    required: true
+
+runs:
+  using: composite
+
+  steps:
+    - name: Generate .env
+      shell: bash
+      env:
+        VARIABLE_NAMES: ${{ inputs.variables }}
+        SECRETS_JSON: ${{ inputs.secrets }}
+      run: node "$GITHUB_ACTION_PATH/create-env.mjs"
