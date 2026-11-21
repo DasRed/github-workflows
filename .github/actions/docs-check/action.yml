@@ -1,0 +1,12 @@
+name: Docs Check
+description: Check the docs of a project against the docs contract of marco-starker.de
+
+inputs:
+  path:
+    description: Docs folder relative to the repository root
+    required: false
+    default: docs
+
+runs:
+  using: node24
+  main: docs-check.mjs

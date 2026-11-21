@@ -1,0 +1,70 @@
+name: Website Release
+description: 'Create an empty commit "docs(<slug>): sync documentation" on the website repository to release new docs'
+
+inputs:
+  token:
+    description: 'Fine-grained token with "Contents: read and write" on the website repository (not the GITHUB_TOKEN)'
+    required: true
+
+  slug:
+    description: Slug of the project on the website
+    required: true
+
+  repo:
+    description: Website repository (owner/name)
+    required: false
+    default: DasRed/marco-starker.de
+
+  branch:
+    description: Release branch of the website repository
+    required: false
+    default: main
+
+outputs:
+  commit:
+    description: SHA of the created commit
+    value: ${{ steps.release.outputs.commit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Create commit on the website
+      id:   release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        SLUG:     ${{ inputs.slug }}
+        REPO:     ${{ inputs.repo }}
+        BRANCH:   ${{ inputs.branch }}
+      run: |
+        set -euo pipefail
+
+        if [[ ! "$SLUG" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+          echo "::error::Invalid slug \"$SLUG\" (only a-z, 0-9 and hyphens)"
+          exit 1
+        fi
+
+        message="docs($SLUG): sync documentation"
+
+        # Without force the ref update fails when the branch moved on in between (another project released at
+        # the same time); then build the commit again on top of the new head.
+        for attempt in 1 2 3; do
+          sha=$(gh api "repos/$REPO/git/ref/heads/$BRANCH" --jq .object.sha)
+          tree=$(gh api "repos/$REPO/git/commits/$sha" --jq .tree.sha)
+          commit=$(gh api "repos/$REPO/git/commits" -f message="$message" -f tree="$tree" -f "parents[]=$sha" --jq .sha)
+
+          if gh api -X PATCH "repos/$REPO/git/refs/heads/$BRANCH" -f sha="$commit" -F force=false --silent; then
+            echo "commit=$commit" >> "$GITHUB_OUTPUT"
+            echo "✓ $REPO@$BRANCH: $message (${commit:0:7})"
+            echo "### Website release" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "\`$message\` on \`$REPO@$BRANCH\` ([${commit:0:7}](https://github.com/$REPO/commit/$commit))" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "::warning::$BRANCH of $REPO moved on, attempt $attempt of 3"
+          sleep $((attempt * 5))
+        done
+
+        echo "::error::Could not update $BRANCH of $REPO after 3 attempts"
+        exit 1
