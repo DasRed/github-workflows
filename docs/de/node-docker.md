@@ -1,9 +1,9 @@
 ---
-title: Node.js Docker CI/CD
+title:       Node.js Docker CI/CD
 description: Wiederverwendbarer Workflow für Test, Build, Release, Multi-Arch-Docker-Image in GHCR, Deployment per Dockhand und Meldung an Home Assistant.
-order: 10
-slug: node-docker
-section: Workflows
+order:       10
+slug:        node-docker
+section:     Workflows
 ---
 
 [`node-docker.yml`](https://github.com/DasRed/github-workflows/blob/main/.github/workflows/node-docker.yml) ist der
@@ -66,20 +66,30 @@ jobs:
 
 ## Inputs
 
-| Name             | Typ     | Pflicht | Standard           | Beschreibung                                    |
-|------------------|---------|---------|--------------------|-------------------------------------------------|
-| `environment`    | string  | ja      |                    | Name der Dockhand-Umgebung für das Deployment   |
-| `container-name` | string  | nein    | Name des Repos     | Name des Containers, der aktualisiert wird      |
-| `node-version`   | string  | nein    | `26`               | Node.js-Version für Installation, Test und Build |
-| `deploy`         | boolean | nein    | `true`             | `false` veröffentlicht nur das Image            |
+| Name             | Typ     | Pflicht | Standard       | Beschreibung                                     |
+|------------------|---------|---------|----------------|--------------------------------------------------|
+| `environment`    | string  | ja      |                | Name der Dockhand-Umgebung für das Deployment    |
+| `container-name` | string  | nein    | Name des Repos | Name des Containers, der aktualisiert wird       |
+| `node-version`   | string  | nein    | `26`           | Node.js-Version für Installation, Test und Build |
+| `deploy`         | boolean | nein    | `true`         | `false` veröffentlicht nur das Image             |
 
 ## Secrets
 
-| Name                        | Pflicht | Beschreibung                                                     |
-|-----------------------------|---------|------------------------------------------------------------------|
+| Name                        | Pflicht | Beschreibung                                                         |
+|-----------------------------|---------|----------------------------------------------------------------------|
 | `dockhand-host`             | ja      | Basis-URL des Dockhand-Servers, z. B. `https://dockhand.example.com` |
-| `dockhand-token`            | ja      | API-Token für Dockhand                                           |
-| `homeassistant-webhook-url` | ja      | Vollständige URL des Home-Assistant-Webhooks                     |
+| `dockhand-token`            | ja      | API-Token für Dockhand                                               |
+| `homeassistant-webhook-url` | ja      | Vollständige URL des Home-Assistant-Webhooks                         |
+
+## Outputs
+
+| Name       | Beschreibung                                                                              |
+|------------|-------------------------------------------------------------------------------------------|
+| `released` | `true`, wenn der Lauf ein Release erzeugt und das Image veröffentlicht hat, sonst `false` |
+| `version`  | Version des Releases aus der `package.json`, leer ohne Release                            |
+| `image`    | Name des Images ohne Tag, z. B. `ghcr.io/owner/repo`                                      |
+
+Damit können weitere Jobs auf ein Release reagieren, z. B. [MCP Registry Publish](mcp-publish.md).
 
 ## Gut zu wissen
 

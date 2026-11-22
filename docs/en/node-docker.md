@@ -81,6 +81,16 @@ jobs:
 | `dockhand-token`            | yes      | Dockhand API token                                                  |
 | `homeassistant-webhook-url` | yes      | Full URL of the Home Assistant webhook                              |
 
+## Outputs
+
+| Name       | Description                                                                |
+|------------|----------------------------------------------------------------------------|
+| `released` | `true` if the run created a release and published the image, otherwise `false` |
+| `version`  | Version of the release from `package.json`, empty without a release        |
+| `image`    | Image name without tag, e.g. `ghcr.io/owner/repo`                           |
+
+Further jobs can react to a release with them, e.g. [MCP Registry Publish](mcp-publish.md).
+
 ## Good to know
 
 - **No release, no image.** Commits without `feat:`, `fix:` or `perf:` create no release, hence no image and no

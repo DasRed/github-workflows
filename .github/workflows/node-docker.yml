@@ -31,6 +31,19 @@ on:
       homeassistant-webhook-url:
         required: true
 
+    outputs:
+      released:
+        description: '"true" if this run created a release and published the image, otherwise "false"'
+        value:       ${{ jobs.publish.outputs.released }}
+
+      version:
+        description: Version of the release (package.json), empty without a release
+        value:       ${{ jobs.publish.outputs.version }}
+
+      image:
+        description: Image name without tag, e.g. ghcr.io/owner/repo
+        value:       ${{ jobs.publish.outputs.image }}
+
 jobs:
   publish:
     name:    Test, Release & Publish
@@ -46,6 +59,7 @@ jobs:
       image:    ${{ steps.metadata.outputs.image }}
       tags:     ${{ steps.metadata.outputs.tags }}
       released: ${{ steps.metadata.outputs.released }}
+      version:  ${{ steps.metadata.outputs.version }}
 
     steps:
       - name: Checkout
@@ -109,6 +123,7 @@ jobs:
                
                {
                  echo "released=true"
+                 echo "version=$VERSION"
                
                  echo "tags<<EOF"
                  echo "$IMAGE:$MAJOR"

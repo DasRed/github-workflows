@@ -1,0 +1,100 @@
+name: MCP Registry Publish
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Released version, e.g. 1.2.3 (output "version" of node-docker.yml); the tag v<version> is checked out
+        type:        string
+        required:    true
+
+      server-file:
+        description: Path of the server.json file in the repository
+        type:        string
+        default:     server.json
+        required:    false
+
+      publisher-version:
+        description: Release tag of mcp-publisher (github.com/modelcontextprotocol/registry)
+        type:        string
+        default:     v1.8.13
+        required:    false
+
+jobs:
+  publish:
+    name:    Publish to MCP Registry
+    runs-on: ubuntu-26.04
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: v${{ inputs.version }}
+
+      - name:  Check Version
+        shell: bash
+        env:
+          VERSION:     ${{ inputs.version }}
+          SERVER_FILE: ${{ inputs.server-file }}
+        run:   |
+               set -euo pipefail
+
+               if [[ ! -f "$SERVER_FILE" ]]; then
+                 echo "::error::$SERVER_FILE not found"
+                 exit 1
+               fi
+
+               # semantic-release sets the version in the release commit, the tag v<version> must contain it
+               actual=$(jq -r .version "$SERVER_FILE")
+               if [[ "$actual" != "$VERSION" ]]; then
+                 echo "::error::$SERVER_FILE has version \"$actual\", expected \"$VERSION\". Is server.json updated and committed by semantic-release?"
+                 exit 1
+               fi
+
+               jq -r --arg v "$VERSION" '.packages[]? | select(.registryType == "oci" and (.identifier | endswith(":" + $v) | not)) | .identifier' "$SERVER_FILE" \
+                 | while read -r identifier; do
+                     echo "::error::Image $identifier does not use the tag $VERSION"
+                     exit 1
+                   done
+
+               echo "### MCP Registry" >> "$GITHUB_STEP_SUMMARY"
+               echo "" >> "$GITHUB_STEP_SUMMARY"
+               echo "\`$(jq -r .name "$SERVER_FILE")\` version \`$VERSION\`" >> "$GITHUB_STEP_SUMMARY"
+               jq -r '.packages[]? | "- `\(.identifier)`"' "$SERVER_FILE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4.1.3
+
+      - name:  Install mcp-publisher
+        shell: bash
+        env:
+          PUBLISHER_VERSION: ${{ inputs.publisher-version }}
+        run:   |
+               set -euo pipefail
+
+               archive="mcp-publisher_linux_amd64.tar.gz"
+               base_url="https://github.com/modelcontextprotocol/registry/releases/download/$PUBLISHER_VERSION"
+
+               curl --fail --location --silent --show-error --output "$RUNNER_TEMP/$archive" "$base_url/$archive"
+               curl --fail --location --silent --show-error --output "$RUNNER_TEMP/$archive.sigstore.json" "$base_url/$archive.sigstore.json"
+
+               cosign verify-blob \
+                 --bundle "$RUNNER_TEMP/$archive.sigstore.json" \
+                 --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/$PUBLISHER_VERSION" \
+                 --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+                 "$RUNNER_TEMP/$archive"
+
+               tar xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" mcp-publisher
+               echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Login
+        run:  mcp-publisher login github-oidc
+
+      - name: Publish
+        env:
+          SERVER_FILE: ${{ inputs.server-file }}
+        run:  mcp-publisher publish "$SERVER_FILE"

@@ -1,8 +1,8 @@
 ---
-title: Overview
+title:       Overview
 description: Reusable GitHub workflows and actions for Node.js projects – release, Docker image, deployment via Dockhand, notification and docs.
-order: 0
-section: Getting started
+order:       0
+section:     Getting started
 ---
 
 `github-workflows` keeps the CI/CD building blocks of my Node.js projects in one place. A project calls the workflow
@@ -12,14 +12,15 @@ their docs and bring them onto marco-starker.de.
 
 ## Contents
 
-| Building block                                         | Kind              | Purpose                                                |
-|--------------------------------------------------------|-------------------|--------------------------------------------------------|
+| Building block                                         | Kind              | Purpose                                                      |
+|--------------------------------------------------------|-------------------|--------------------------------------------------------------|
 | [Node.js Docker CI/CD](node-docker.md)                 | reusable workflow | Test, build, release, Docker image, deployment, notification |
-| [Dockhand Update](dockhand-update.md)                  | action            | Update a container through the Dockhand API            |
-| [Home Assistant Notification](homeassistant-notify.md) | action            | Send the result of a run to a Home Assistant webhook   |
-| [Create .env](create-env.md)                           | action            | Generate a `.env` from GitHub secrets                  |
-| [Docs Check](docs-check.md)                            | action            | Check `docs/` against the docs contract                |
-| [Website Release](website-release.md)                  | action            | Trigger a website release so new docs show up          |
+| [MCP Registry Publish](mcp-publish.md)                 | reusable workflow | Publish an MCP server to the MCP Registry after a release    |
+| [Dockhand Update](dockhand-update.md)                  | action            | Update a container through the Dockhand API                  |
+| [Home Assistant Notification](homeassistant-notify.md) | action            | Send the result of a run to a Home Assistant webhook         |
+| [Create .env](create-env.md)                           | action            | Generate a `.env` from GitHub secrets                        |
+| [Docs Check](docs-check.md)                            | action            | Check `docs/` against the docs contract                      |
+| [Website Release](website-release.md)                  | action            | Trigger a website release so new docs show up                |
 
 Next to them lives `.github/workflows/_release.yml`. It releases this repository itself and is not meant to be
 called.

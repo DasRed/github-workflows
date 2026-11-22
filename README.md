@@ -10,16 +10,17 @@ Documentation: https://www.marco-starker.de/en/projects/github-workflows/docs
 
 ## Contents
 
-| Path                                   | Type              | Purpose                                                         |
-|----------------------------------------|-------------------|-----------------------------------------------------------------|
-| `.github/workflows/node-docker.yml`    | Reusable workflow | Test, build, release, publish a Docker image, deploy and notify |
-| `.github/actions/dockhand-update`      | Action            | Update a container through the Dockhand API                     |
-| `.github/actions/homeassistant-notify` | Action            | Send the result of a workflow run to a Home Assistant webhook   |
-| `.github/actions/create-env`           | Action            | Generate a `.env` file from GitHub secrets                      |
-| `.github/actions/docs-check`           | Action            | Check a `docs/` folder against the docs contract                |
-| `.github/actions/website-release`      | Action            | Release the website so it picks up the changed docs            |
-| `.github/workflows/_release.yml`       | Internal workflow | Releases this repository itself                                 |
-| `.github/workflows/_docs.yml`          | Internal workflow | Checks and publishes the docs of this repository                |
+| Path                                   | Type              | Purpose                                                            |
+|----------------------------------------|-------------------|--------------------------------------------------------------------|
+| `.github/workflows/node-docker.yml`    | Reusable workflow | Test, build, release, publish a Docker image, deploy and notify    |
+| `.github/workflows/mcp-publish.yml`    | Reusable workflow | Publish an MCP server to the official MCP Registry after a release |
+| `.github/actions/dockhand-update`      | Action            | Update a container through the Dockhand API                        |
+| `.github/actions/homeassistant-notify` | Action            | Send the result of a workflow run to a Home Assistant webhook      |
+| `.github/actions/create-env`           | Action            | Generate a `.env` file from GitHub secrets                         |
+| `.github/actions/docs-check`           | Action            | Check a `docs/` folder against the docs contract                   |
+| `.github/actions/website-release`      | Action            | Release the website so it picks up the changed docs                |
+| `.github/workflows/_release.yml`       | Internal workflow | Releases this repository itself                                    |
+| `.github/workflows/_docs.yml`          | Internal workflow | Checks and publishes the docs of this repository                   |
 
 ## Quick start
 
