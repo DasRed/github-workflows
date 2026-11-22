@@ -1,0 +1,28 @@
+name: Docs
+
+on:
+  push:
+    branches: [ main ]
+    paths:    [ 'docs/**' ]
+
+  pull_request:
+    paths:    [ 'docs/**' ]
+
+  workflow_dispatch:
+
+jobs:
+  docs:
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      # local actions: this repository checks and releases its docs with its own, current version
+      - uses: ./.github/actions/docs-check
+
+      - uses: ./.github/actions/website-release
+        if:   github.event_name != 'pull_request'
+        with:
+          token: ${{ secrets.WEBSITE_RELEASE_TOKEN }}
+          slug:  github-workflows
