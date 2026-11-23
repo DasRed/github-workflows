@@ -1,6 +1,6 @@
 ---
 title: Create .env
-description: Action, die aus ausgewählten GitHub-Secrets eine .env-Datei erzeugt und fehlende oder mehrzeilige Werte abweist.
+description: GitHub Action, die aus ausgewählten Secrets eine .env-Datei für Docker oder den Build erzeugt und fehlende oder mehrzeilige Werte abweist. Aufruf und Inputs.
 order: 70
 slug: create-env
 section: Actions

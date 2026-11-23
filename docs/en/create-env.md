@@ -1,6 +1,6 @@
 ---
 title: Create .env
-description: Action that creates a .env file from selected GitHub secrets and rejects missing or multi-line values.
+description: GitHub Action that creates a .env file for Docker or the build from selected secrets and rejects missing or multi-line values. Call, inputs and checks.
 order: 70
 slug: create-env
 section: Actions

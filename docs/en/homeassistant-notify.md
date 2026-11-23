@@ -1,6 +1,6 @@
 ---
 title: Home Assistant Notification
-description: Action that sends the result of a workflow run, with commit and job states, as JSON to a Home Assistant webhook.
+description: GitHub Action that sends the result of a workflow run, with commit and job states, as JSON to a Home Assistant webhook. Inputs, payload and automation example.
 order: 60
 slug: homeassistant-notify
 section: Actions

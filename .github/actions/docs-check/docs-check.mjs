@@ -2,8 +2,11 @@ import {appendFile, readdir, readFile, stat} from 'node:fs/promises';
 import path from 'node:path';
 
 // Same rules as src/service/docs/DocsValidator.ts of marco-starker.de, which checks the docs again when it
-// builds. Keep both in sync: the contract is docs-contract.md in the ai-instructions repository.
+// builds. Keep both in sync: the contract is docs-contract.md in the ai-instructions repository. Only the minimum
+// length of "description" is checked here alone, the build of the website does not check it.
 const LANGUAGES          = ['de', 'en'];
+const DESCRIPTION_MIN    = 120;
+const DESCRIPTION_MAX    = 160;
 const IMAGE_EXTENSIONS   = ['gif', 'jpg', 'jpeg', 'png', 'svg', 'webp'];
 const MAX_IMAGE_BYTES    = 500 * 1024;
 const MAX_ANIMATED_BYTES = 2 * 1024 * 1024;
@@ -107,8 +110,8 @@ function validatePage(error, file, source, files) {
     if ((data.description ?? '') === '') {
         error(file, 1, 'frontmatter "description" missing');
     }
-    else if (data.description.length > 160) {
-        error(file, 1, '"description" is longer than 160 characters');
+    else if (data.description.length < DESCRIPTION_MIN || data.description.length > DESCRIPTION_MAX) {
+        error(file, 1, `"description" must be ${DESCRIPTION_MIN}–${DESCRIPTION_MAX} characters, got ${data.description.length}`);
     }
     if (/^-?\d+$/.test(data.order ?? '') === false) {
         error(file, 1, 'frontmatter "order" must be a whole number');

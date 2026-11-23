@@ -1,6 +1,6 @@
 ---
 title: Docs Check
-description: Action, die den docs-Ordner eines Projekts mit denselben Regeln prüft wie der Build von marco-starker.de.
+description: GitHub Action, die den docs-Ordner eines Projekts nach dem Doku-Vertrag von marco-starker.de prüft, mit Frontmatter, Sprachen, Links, Bildern und Description.
 order: 80
 slug: docs-check
 section: Actions
@@ -8,7 +8,8 @@ section: Actions
 
 [`docs-check`](https://github.com/DasRed/github-workflows/tree/main/.github/actions/docs-check) prüft die Doku eines
 Projekts, bevor sie auf [marco-starker.de](https://www.marco-starker.de) erscheint. Die Regeln sind dieselben, die die
-Webseite beim Build anwendet. Ist die Prüfung grün, nimmt auch der Build der Webseite die Doku an.
+Webseite beim Build anwendet; nur die Mindestlänge der `description` prüft allein die Action. Ist die Prüfung grün,
+nimmt auch der Build der Webseite die Doku an.
 
 ## Was geprüft wird
 
@@ -16,7 +17,7 @@ Webseite beim Build anwendet. Ist die Prüfung grün, nimmt auch der Build der W
   `jpeg`, `png`, `svg`, `webp`).
 - **Seiten:** `de/index.md` und `en/index.md` sind vorhanden, jede Seite gibt es in beiden Sprachen mit gleichem
   Dateinamen.
-- **Frontmatter:** `title`, `description` (höchstens 160 Zeichen) und `order` als ganze Zahl. `slug` ist optional,
+- **Frontmatter:** `title`, `description` (120 bis 160 Zeichen) und `order` als ganze Zahl. `slug` ist optional,
   enthält nur a–z, 0–9 und Bindestriche und ist je Sprache eindeutig.
 - **Markdown:** keine `# `-Überschrift im Text, jeder Codeblock nennt seine Sprache, HTML nur `<details>` und
   `<summary>`.

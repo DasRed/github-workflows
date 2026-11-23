@@ -1,6 +1,6 @@
 ---
 title:       MCP Registry Publish
-description: Reusable workflow that publishes an MCP server to the official MCP Registry after a release.
+description: Reusable GitHub workflow that publishes an MCP server to the official MCP Registry after a release. Flow, requirements in your project, call and inputs.
 order:       20
 slug:        mcp-publish
 section:     Workflows

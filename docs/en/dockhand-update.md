@@ -1,6 +1,6 @@
 ---
 title: Dockhand Update
-description: Action that updates a Docker container with a new image through the Dockhand API and restarts it.
+description: GitHub Action that updates a Docker container with a new image through the Dockhand API and restarts it, for example after a release. Flow, call and inputs.
 order: 50
 slug: dockhand-update
 section: Actions

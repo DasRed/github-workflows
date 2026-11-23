@@ -1,6 +1,6 @@
 ---
 title: Docs Check
-description: Action that checks a project's docs folder with the same rules the build of marco-starker.de applies.
+description: GitHub Action that checks a project's docs folder against the docs contract of marco-starker.de, with front matter, languages, links, images and descriptions.
 order: 80
 slug: docs-check
 section: Actions
@@ -8,14 +8,15 @@ section: Actions
 
 [`docs-check`](https://github.com/DasRed/github-workflows/tree/main/.github/actions/docs-check) checks the docs of a
 project before they appear on [marco-starker.de](https://www.marco-starker.de). The rules are the same the website
-applies at build time. If the check is green, the website build accepts the docs too.
+applies at build time; only the minimum length of `description` is checked by the action alone. If the check is
+green, the website build accepts the docs too.
 
 ## What is checked
 
 - **Folders:** only `de/`, `en/` and `assets/`, no subfolders. `assets/` holds images only (`gif`, `jpg`, `jpeg`,
   `png`, `svg`, `webp`).
 - **Pages:** `de/index.md` and `en/index.md` exist, every page exists in both languages with the same file name.
-- **Front matter:** `title`, `description` (at most 160 characters) and `order` as a whole number. `slug` is optional,
+- **Front matter:** `title`, `description` (120 to 160 characters) and `order` as a whole number. `slug` is optional,
   contains only a–z, 0–9 and hyphens and is unique per language.
 - **Markdown:** no `# ` heading in the text, every code block names its language, HTML only `<details>` and
   `<summary>`.
