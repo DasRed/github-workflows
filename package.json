@@ -4,14 +4,10 @@
     "type": "module",
     "author": "Marco Starker",
     "private": true,
-    "publishConfig": {
-        "registry": "https://npm.pkg.github.com",
-        "access": "restricted"
-    },
     "bugs": {
         "url": "https://github.com/dasred/github-workflows/issues"
     },
-    "homepage": "https://github.com/dasred/github-workflows",
+    "homepage": "https://www.marco-starker.de/en/projects/github-workflows/docs",
     "engines": {
         "node": ">=26.13.0",
         "npm": ">=11.20.0"
