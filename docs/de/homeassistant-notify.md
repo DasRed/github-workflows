@@ -25,7 +25,7 @@ notify:
   permissions:
     contents: read
   steps:
-    - uses: DasRed/github-workflows/.github/actions/homeassistant-notify@v1
+    - uses: DasRed/github-workflows/.github/actions/homeassistant-notify@v2
       with:
         webhook_url:  ${{ secrets.HOMEASSISTANT_WEBHOOK_URL }}
         job_results:  ${{ toJSON(needs) }}

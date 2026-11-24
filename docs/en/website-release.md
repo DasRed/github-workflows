@@ -1,6 +1,6 @@
 ---
 title: Website Release
-description: Action that triggers a website release with an empty docs commit so changed project docs appear there, plus the docs workflow for projects.
+description: Action that triggers a website release with an empty docs commit so changed project docs appear there. Inputs, token and an example call.
 order: 90
 slug: website-release
 section: Actions
@@ -23,7 +23,7 @@ The commit appears in the job summary with a link.
 ## Call
 
 ```yaml
-- uses: DasRed/github-workflows/.github/actions/website-release@v1
+- uses: DasRed/github-workflows/.github/actions/website-release@v2
   with:
     token: ${{ secrets.WEBSITE_RELEASE_TOKEN }}
     slug:  my-project
@@ -48,36 +48,5 @@ The commit appears in the job summary with a link.
 
 ## Docs workflow of a project
 
-Both docs actions together in `.github/workflows/docs.yml` of a project:
-
-```yaml
-name: Docs
-
-on:
-  push:
-    branches: [ main ]
-    paths:    [ 'docs/**' ]
-
-  pull_request:
-    paths:    [ 'docs/**' ]
-
-  workflow_dispatch:
-
-jobs:
-  docs:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: DasRed/github-workflows/.github/actions/docs-check@v1
-
-      - uses: DasRed/github-workflows/.github/actions/website-release@v1
-        if:   github.event_name != 'pull_request'
-        with:
-          token: ${{ secrets.WEBSITE_RELEASE_TOKEN }}
-          slug:  my-project
-```
-
-In pull requests only the [check](docs-check.md) runs; the release follows the merge to `main`.
+In projects you don't call the action yourself but the [Docs](docs-workflow.md) workflow. It checks the docs with
+[Docs Check](docs-check.md) and then triggers the release.

@@ -1,6 +1,6 @@
 ---
 title: Website Release
-description: Action, die per leerem docs-Commit ein Release der Webseite auslöst, damit geänderte Projekt-Doku dort erscheint, plus der Doku-Workflow für Projekte.
+description: Action, die per leerem docs-Commit ein Release der Webseite auslöst, damit geänderte Projekt-Doku dort erscheint. Inputs, Token und Beispiel-Aufruf.
 order: 90
 slug: website-release
 section: Actions
@@ -23,7 +23,7 @@ Der Commit erscheint in der Zusammenfassung des Jobs mit Link.
 ## Aufruf
 
 ```yaml
-- uses: DasRed/github-workflows/.github/actions/website-release@v1
+- uses: DasRed/github-workflows/.github/actions/website-release@v2
   with:
     token: ${{ secrets.WEBSITE_RELEASE_TOKEN }}
     slug:  my-project
@@ -48,36 +48,5 @@ Der Commit erscheint in der Zusammenfassung des Jobs mit Link.
 
 ## Doku-Workflow eines Projekts
 
-Beide Doku-Actions zusammen in `.github/workflows/docs.yml` eines Projekts:
-
-```yaml
-name: Docs
-
-on:
-  push:
-    branches: [ main ]
-    paths:    [ 'docs/**' ]
-
-  pull_request:
-    paths:    [ 'docs/**' ]
-
-  workflow_dispatch:
-
-jobs:
-  docs:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: DasRed/github-workflows/.github/actions/docs-check@v1
-
-      - uses: DasRed/github-workflows/.github/actions/website-release@v1
-        if:   github.event_name != 'pull_request'
-        with:
-          token: ${{ secrets.WEBSITE_RELEASE_TOKEN }}
-          slug:  my-project
-```
-
-In Pull Requests läuft nur die [Prüfung](docs-check.md), das Release folgt mit dem Merge auf `main`.
+In Projekten rufst du die Action nicht selbst auf, sondern den Workflow [Docs](docs-workflow.md). Er prüft die
+Doku mit [Docs Check](docs-check.md) und löst danach das Release aus.

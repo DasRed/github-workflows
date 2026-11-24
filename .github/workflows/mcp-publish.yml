@@ -1,12 +1,43 @@
-name: MCP Registry Publish
+name: MCP Server CI/CD
 
 on:
   workflow_call:
     inputs:
-      version:
-        description: Released version, e.g. 1.2.3 (output "version" of node-docker.yml); the tag v<version> is checked out
+      environment:
+        type:     string
+        required: true
+
+      container-name:
+        type:     string
+        required: false
+
+      node-version:
+        type:     string
+        default:  '26'
+        required: false
+
+      deploy:
+        type:     boolean
+        default:  true
+        required: false
+
+      changelog:
+        description: Maintain CHANGELOG.md in the repository (built-in semantic-release only)
+        type:        boolean
+        default:     true
+        required:    false
+
+      release-docs:
+        description: Release a patch for docs commits (built-in semantic-release only)
+        type:        boolean
+        default:     false
+        required:    false
+
+      backmerge-branch:
+        description: Branch that gets the release merged back, skipped if it does not exist, empty disables it (built-in semantic-release only)
         type:        string
-        required:    true
+        default:     develop
+        required:    false
 
       server-file:
         description: Path of the server.json file in the repository
@@ -20,10 +51,62 @@ on:
         default:     v1.8.13
         required:    false
 
+    secrets:
+      dockhand-host:
+        required: true
+
+      dockhand-token:
+        required: true
+
+      homeassistant-webhook-url:
+        required: true
+
+    outputs:
+      released:
+        description: '"true" if this run created a release and published the image, otherwise "false"'
+        value:       ${{ jobs.publish.outputs.released }}
+
+      version:
+        description: Version of the release (package.json), empty without a release
+        value:       ${{ jobs.publish.outputs.version }}
+
+      image:
+        description: Image name without tag, e.g. ghcr.io/owner/repo
+        value:       ${{ jobs.publish.outputs.image }}
+
 jobs:
+  # test, release, image and deployment are the same as for every Docker project
   publish:
+    name: Node.js Docker
+
+    permissions:
+      contents:      write
+      packages:      write
+      issues:        write
+      pull-requests: write
+
+    uses: DasRed/github-workflows/.github/workflows/node-docker.yml@v2
+    secrets:
+      dockhand-host:             ${{ secrets.dockhand-host }}
+      dockhand-token:            ${{ secrets.dockhand-token }}
+      homeassistant-webhook-url: ${{ secrets.homeassistant-webhook-url }}
+    with:
+      environment:      ${{ inputs.environment }}
+      container-name:   ${{ inputs.container-name }}
+      node-version:     ${{ inputs.node-version }}
+      deploy:           ${{ inputs.deploy }}
+      changelog:        ${{ inputs.changelog }}
+      release-docs:     ${{ inputs.release-docs }}
+      backmerge-branch: ${{ inputs.backmerge-branch }}
+      notify:           false
+
+  mcp-registry:
     name:    Publish to MCP Registry
     runs-on: ubuntu-26.04
+    needs:   publish
+
+    # the image is published even if only the deployment failed, so the registry entry is still possible
+    if:      ${{ !cancelled() && needs.publish.outputs.released == 'true' }}
 
     permissions:
       contents: read
@@ -33,12 +116,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          ref: v${{ inputs.version }}
+          ref: v${{ needs.publish.outputs.version }}
 
       - name:  Check Version
         shell: bash
         env:
-          VERSION:     ${{ inputs.version }}
+          VERSION:     ${{ needs.publish.outputs.version }}
           SERVER_FILE: ${{ inputs.server-file }}
         run:   |
                set -euo pipefail
@@ -98,3 +181,23 @@ jobs:
         env:
           SERVER_FILE: ${{ inputs.server-file }}
         run:  mcp-publisher publish "$SERVER_FILE"
+
+  notify:
+    name: Notify Home Assistant
+
+    needs: [publish, mcp-registry]
+
+    if: ${{ always() }}
+
+    runs-on: ubuntu-26.04
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Send Notification
+        uses: DasRed/github-workflows/.github/actions/homeassistant-notify@v2
+        with:
+          webhook_url: ${{ secrets.homeassistant-webhook-url }}
+          job_results: ${{ toJSON(needs) }}
+          github_token: ${{ github.token }}

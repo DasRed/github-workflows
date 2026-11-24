@@ -22,7 +22,7 @@ first 500 characters of the response.
 ## Call
 
 ```yaml
-- uses: DasRed/github-workflows/.github/actions/dockhand-update@v1
+- uses: DasRed/github-workflows/.github/actions/dockhand-update@v2
   with:
     host:           ${{ secrets.DOCKHAND_HOST }}
     token:          ${{ secrets.DOCKHAND_TOKEN }}

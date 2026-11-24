@@ -1,0 +1,21 @@
+{
+    "name": "semantic-release-action",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "description": "Dependencies of the semantic-release action, installed by the action itself",
+    "engines": {
+        "node": ">=26.13.0"
+    },
+    "dependencies": {
+        "@saithodev/semantic-release-backmerge": "^4.0.1",
+        "@semantic-release/changelog": "^7.0.0",
+        "@semantic-release/commit-analyzer": "^14.0.0-beta.5",
+        "@semantic-release/git": "^11.0.1",
+        "@semantic-release/github": "^12.0.11",
+        "@semantic-release/npm": "^14.0.0-beta.3",
+        "@semantic-release/release-notes-generator": "^15.0.0-beta.4",
+        "conventional-changelog-conventionalcommits": "^10.4.1",
+        "semantic-release": "^26.0.1"
+    }
+}

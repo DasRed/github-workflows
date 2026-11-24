@@ -14,19 +14,19 @@ komplette Ablauf für ein Node.js-Projekt, das als Docker-Container läuft. Er b
 1. **publish**
     - Checkt das Repository mit voller Historie aus und richtet Node.js mit npm-Cache ein.
     - Führt `npm ci`, `npm run test --if-present` und `npm run build --if-present` aus.
-    - Auf `main` oder `master`: `npm run semantic-release --if-present`.
+    - Auf `main` oder `master`: Release per [Semantic Release](semantic-release.md). Hat das Projekt ein eigenes
+      npm-Script `semantic-release`, läuft stattdessen dieses.
     - Zeigt der aktuelle Commit auf den Tag `v<version>` aus der `package.json`, entstand in diesem Lauf also ein
       Release, baut er ein Image für `linux/amd64` und `linux/arm64` aus dem `Dockerfile` und schiebt es nach
       `ghcr.io/<owner>/<repo>` mit den Tags `<major>`, `<major>.<minor>`, `<version>` und `latest`.
 2. **deploy** – nur wenn ein Image veröffentlicht wurde und `deploy` auf `true` steht: aktualisiert den Container in
    der angegebenen Dockhand-Umgebung auf das neue `latest`-Image, siehe [Dockhand Update](dockhand-update.md).
-3. **notify** – läuft immer und meldet das Ergebnis an Home Assistant, siehe
+3. **notify** – läuft immer, außer mit `notify: false`, und meldet das Ergebnis an Home Assistant, siehe
    [Home Assistant Notification](homeassistant-notify.md). Ein übersprungenes Deployment zählt als Erfolg.
 
 ## Voraussetzungen im Projekt
 
 - `package.json` mit `version` und eine `package-lock.json`
-- ein npm-Script `semantic-release` samt Konfiguration, wenn Releases entstehen sollen
 - ein `Dockerfile` im Wurzelordner
 - optional die npm-Scripts `test` und `build`
 
@@ -49,7 +49,7 @@ permissions:
 
 jobs:
   pipeline:
-    uses: DasRed/github-workflows/.github/workflows/node-docker.yml@v1
+    uses: DasRed/github-workflows/.github/workflows/node-docker.yml@v2
     secrets:
       dockhand-host:             ${{ secrets.DOCKHAND_HOST }}
       dockhand-token:            ${{ secrets.DOCKHAND_TOKEN }}
@@ -66,12 +66,19 @@ jobs:
 
 ## Inputs
 
-| Name             | Typ     | Pflicht | Standard       | Beschreibung                                     |
-|------------------|---------|---------|----------------|--------------------------------------------------|
-| `environment`    | string  | ja      |                | Name der Dockhand-Umgebung für das Deployment    |
-| `container-name` | string  | nein    | Name des Repos | Name des Containers, der aktualisiert wird       |
-| `node-version`   | string  | nein    | `26`           | Node.js-Version für Installation, Test und Build |
-| `deploy`         | boolean | nein    | `true`         | `false` veröffentlicht nur das Image             |
+| Name               | Typ     | Pflicht | Standard       | Beschreibung                                                                                   |
+|--------------------|---------|---------|----------------|------------------------------------------------------------------------------------------------|
+| `environment`      | string  | ja      |                | Name der Dockhand-Umgebung für das Deployment                                                  |
+| `container-name`   | string  | nein    | Name des Repos | Name des Containers, der aktualisiert wird                                                     |
+| `node-version`     | string  | nein    | `26`           | Node.js-Version für Installation, Test und Build                                               |
+| `deploy`           | boolean | nein    | `true`         | `false` veröffentlicht nur das Image                                                           |
+| `notify`           | boolean | nein    | `true`         | `false` schaltet die Meldung an Home Assistant ab, wenn ein aufrufender Workflow selbst meldet |
+| `changelog`        | boolean | nein    | `true`         | `CHANGELOG.md` im Repository pflegen                                                           |
+| `release-docs`     | boolean | nein    | `false`        | `docs:`-Commits lösen ein Patch-Release aus                                                    |
+| `backmerge-branch` | string  | nein    | `develop`      | Branch für den Backmerge, leer schaltet ab                                                     |
+
+`changelog`, `release-docs` und `backmerge-branch` gelten nur für das eingebaute semantic-release, siehe
+[Semantic Release](semantic-release.md).
 
 ## Secrets
 
@@ -89,7 +96,23 @@ jobs:
 | `version`  | Version des Releases aus der `package.json`, leer ohne Release                            |
 | `image`    | Name des Images ohne Tag, z. B. `ghcr.io/owner/repo`                                      |
 
-Damit können weitere Jobs auf ein Release reagieren, z. B. [MCP Registry Publish](mcp-publish.md).
+Damit können weitere Jobs auf ein Release reagieren. [MCP Server CI/CD](mcp-publish.md) nutzt das, um nach dem
+Release den Eintrag in die MCP Registry zu machen.
+
+## Eigenes semantic-release
+
+Hat die `package.json` ein Script `semantic-release`, ruft der Workflow wie bisher `npm run semantic-release` auf, und
+die Konfiguration des Projekts gilt. So laufen bestehende Projekte unverändert weiter. Zum Umstieg entfernst du aus
+der `package.json` die Abhängigkeiten `semantic-release`, `@semantic-release/*` und
+`conventional-changelog-conventionalcommits`, den Schlüssel `release` und die Scripts `semantic-release`,
+`publish:check` und `prepublishOnly`. Was dein bisheriges Setup zusätzlich machte, stellst du über die Inputs ein:
+
+| Bisher im Projekt                              | Mit dem eingebauten semantic-release |
+|------------------------------------------------|--------------------------------------|
+| `releaseRules` mit `docs` → `patch`            | `release-docs: true`                 |
+| `@semantic-release/exec` für die `server.json` | nichts, passiert automatisch         |
+| kein `@semantic-release/changelog`             | `changelog: false`                   |
+| Backmerge nach `develop`                       | nichts, passiert automatisch         |
 
 ## Gut zu wissen
 

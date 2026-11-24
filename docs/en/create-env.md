@@ -13,7 +13,7 @@ configuration from a `.env`.
 ## Call
 
 ```yaml
-- uses: DasRed/github-workflows/.github/actions/create-env@v1
+- uses: DasRed/github-workflows/.github/actions/create-env@v2
   with:
     variables: DATABASE_URL,API_KEY
     secrets:   ${{ toJSON(secrets) }}

@@ -1,0 +1,59 @@
+name: Docs
+
+on:
+  workflow_call:
+    inputs:
+      slug:
+        description: Slug of the project on the website, defaults to the repository name
+        type:        string
+        required:    false
+
+      path:
+        description: Docs folder relative to the repository root
+        type:        string
+        default:     docs
+        required:    false
+
+      website-repo:
+        description: Website repository (owner/name)
+        type:        string
+        default:     DasRed/marco-starker.de
+        required:    false
+
+      website-branch:
+        description: Release branch of the website repository
+        type:        string
+        default:     main
+        required:    false
+
+    secrets:
+      website-release-token:
+        description: 'Fine-grained token with "Contents: read and write" on the website repository'
+        required:    true
+
+jobs:
+  docs:
+    name:    Check & Release Docs
+    runs-on: ubuntu-26.04
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check Docs
+        uses: DasRed/github-workflows/.github/actions/docs-check@v2
+        with:
+          path: ${{ inputs.path }}
+
+      # pull requests only get the check, the release follows with the merge
+      - name: Release Website
+        if:   github.event_name != 'pull_request'
+        uses: DasRed/github-workflows/.github/actions/website-release@v2
+        with:
+          token:  ${{ secrets.website-release-token }}
+          slug:   ${{ inputs.slug || github.event.repository.name }}
+          repo:   ${{ inputs.website-repo }}
+          branch: ${{ inputs.website-branch }}

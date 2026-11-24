@@ -13,6 +13,12 @@ on:
         default: true
         required: false
 
+      notify:
+        description: Report the result to Home Assistant, false if a calling workflow does that itself
+        type:        boolean
+        default:     true
+        required:    false
+
       environment:
         type:     string
         required: true
@@ -20,6 +26,24 @@ on:
       container-name:
         type:     string
         required: false
+
+      changelog:
+        description: Maintain CHANGELOG.md in the repository (built-in semantic-release only)
+        type:        boolean
+        default:     true
+        required:    false
+
+      release-docs:
+        description: Release a patch for docs commits (built-in semantic-release only)
+        type:        boolean
+        default:     false
+        required:    false
+
+      backmerge-branch:
+        description: Branch that gets the release merged back, skipped if it does not exist, empty disables it (built-in semantic-release only)
+        type:        string
+        default:     develop
+        required:    false
 
     secrets:
       dockhand-host:
@@ -89,11 +113,35 @@ jobs:
       - name: Build
         run:  npm run build --if-present
 
-      - name: Release
-        if:   github.ref_name == 'main' || github.ref_name == 'master'
+      - name:  Detect semantic-release
+        id:    semantic-release
+        shell: bash
+        run:   |
+               set -euo pipefail
+
+               # projects with their own npm script "semantic-release" keep releasing with it
+               if node -e "process.exit(require('./package.json').scripts?.['semantic-release'] ? 0 : 1)"; then
+                 echo "own=true" >> "$GITHUB_OUTPUT"
+                 echo "Using the semantic-release of the project"
+               else
+                 echo "own=false" >> "$GITHUB_OUTPUT"
+                 echo "Using the built-in semantic-release"
+               fi
+
+      - name: Release (project)
+        if:   (github.ref_name == 'main' || github.ref_name == 'master') && steps.semantic-release.outputs.own == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run:  npm run semantic-release --if-present
+        run:  npm run semantic-release
+
+      - name: Release
+        if:   (github.ref_name == 'main' || github.ref_name == 'master') && steps.semantic-release.outputs.own != 'true'
+        uses: DasRed/github-workflows/.github/actions/semantic-release@v2
+        with:
+          github-token:     ${{ github.token }}
+          changelog:        ${{ inputs.changelog }}
+          release-docs:     ${{ inputs.release-docs }}
+          backmerge-branch: ${{ inputs.backmerge-branch }}
 
       - name:  Docker Metadata
         id:    metadata
@@ -171,7 +219,7 @@ jobs:
 
     steps:
       - name: Update Container
-        uses: DasRed/github-workflows/.github/actions/dockhand-update@v1
+        uses: DasRed/github-workflows/.github/actions/dockhand-update@v2
         with:
           host:           ${{ secrets.dockhand-host }}
           token:          ${{ secrets.dockhand-token }}
@@ -184,7 +232,7 @@ jobs:
 
     needs: [publish, deploy]
 
-    if: ${{ always() }}
+    if: ${{ always() && inputs.notify }}
 
     runs-on: ubuntu-26.04
 
@@ -193,7 +241,7 @@ jobs:
 
     steps:
       - name: Send Notification
-        uses: DasRed/github-workflows/.github/actions/homeassistant-notify@v1
+        uses: DasRed/github-workflows/.github/actions/homeassistant-notify@v2
         with:
           webhook_url: ${{ secrets.homeassistant-webhook-url }}
           job_results: ${{ toJSON(needs) }}

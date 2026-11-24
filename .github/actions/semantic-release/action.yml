@@ -1,0 +1,58 @@
+name: Semantic Release
+description: Release a Node.js project with semantic-release without any semantic-release setup in the project
+
+inputs:
+  github-token:
+    description: Token for the GitHub release and the push of the release commit and tag
+    required:    true
+
+  changelog:
+    description: Maintain CHANGELOG.md in the repository
+    required:    false
+    default:     'true'
+
+  release-docs:
+    description: Release a patch for docs commits, e.g. for a website that shows the docs
+    required:    false
+    default:     'false'
+
+  backmerge-branch:
+    description: Branch that gets the release merged back, skipped if it does not exist, empty disables it
+    required:    false
+    default:     develop
+
+outputs:
+  released:
+    description: '"true" if a release was created, otherwise "false"'
+    value:       ${{ steps.release.outputs.released }}
+
+  version:
+    description: Version of the release, empty without a release
+    value:       ${{ steps.release.outputs.version }}
+
+  git-tag:
+    description: Git tag of the release, e.g. v1.2.3, empty without a release
+    value:       ${{ steps.release.outputs.git-tag }}
+
+  channel:
+    description: Distribution channel of the release, empty for the default channel
+    value:       ${{ steps.release.outputs.channel }}
+
+runs:
+  using: composite
+  steps:
+    - name:              Install semantic-release
+      shell:             bash
+      working-directory: ${{ github.action_path }}
+      run:               npm ci --ignore-scripts --no-audit --no-fund
+
+    - name:  Release
+      id:    release
+      shell: bash
+      env:
+        GITHUB_TOKEN:     ${{ inputs.github-token }}
+        CHANGELOG:        ${{ inputs.changelog }}
+        RELEASE_DOCS:     ${{ inputs.release-docs }}
+        BACKMERGE_BRANCH: ${{ inputs.backmerge-branch }}
+        ACTION_PATH:      ${{ github.action_path }}
+      run:   node "$ACTION_PATH/release.mjs"

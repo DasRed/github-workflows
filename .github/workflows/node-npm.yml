@@ -1,0 +1,321 @@
+name: Node.js npm CI/CD
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        type:    string
+        default: '26'
+        required: false
+
+      publish-npm:
+        description: Publish the package to npmjs.com (trusted publishing via OIDC)
+        type:        boolean
+        default:     true
+        required:    false
+
+      publish-github:
+        description: Publish the package to GitHub Packages
+        type:        boolean
+        default:     true
+        required:    false
+
+      npm-access:
+        description: Access level on npmjs.com, "public" or "restricted"
+        type:        string
+        default:     public
+        required:    false
+
+      changelog:
+        description: Maintain CHANGELOG.md in the repository
+        type:        boolean
+        default:     true
+        required:    false
+
+      backmerge-branch:
+        description: Branch that gets the release merged back, skipped if it does not exist, empty disables it
+        type:        string
+        default:     develop
+        required:    false
+
+    secrets:
+      homeassistant-webhook-url:
+        required: true
+
+    outputs:
+      released:
+        description: '"true" if this run created a release, otherwise "false"'
+        value:       ${{ jobs.publish.outputs.released }}
+
+      version:
+        description: Version of the release (package.json), empty without a release
+        value:       ${{ jobs.publish.outputs.version }}
+
+      package:
+        description: Name of the package from package.json
+        value:       ${{ jobs.publish.outputs.package }}
+
+jobs:
+  publish:
+    name:    Test, Release & Pack
+    runs-on: ubuntu-26.04
+
+    permissions:
+      contents:      write
+      issues:        write
+      pull-requests: write
+
+    outputs:
+      package:  ${{ steps.metadata.outputs.package }}
+      released: ${{ steps.metadata.outputs.released }}
+      version:  ${{ steps.metadata.outputs.version }}
+      tarball:  ${{ steps.pack.outputs.tarball }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth:         0
+          persist-credentials: true
+          token:               ${{ github.token }}
+
+      - name: Configure Git
+        run:  |
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache:        npm
+
+      - name:  Check Package
+        shell: bash
+        env:
+          PUBLISH_NPM:    ${{ inputs.publish-npm }}
+          PUBLISH_GITHUB: ${{ inputs.publish-github }}
+        run:   |
+               set -euo pipefail
+
+               NAME=$(node -p "require('./package.json').name ?? ''")
+               PRIVATE=$(node -p "require('./package.json').private === true")
+
+               if [[ -z "$NAME" ]]; then
+                 echo "::error::package.json has no name"
+                 exit 1
+               fi
+
+               if [[ "$PUBLISH_NPM" == 'true' || "$PUBLISH_GITHUB" == 'true' ]] && [[ "$PRIVATE" == 'true' ]]; then
+                 echo "::error::package.json contains \"private\": true, npm refuses to publish it"
+                 exit 1
+               fi
+
+               # GitHub Packages only accepts packages in the scope of the repository owner
+               SCOPE="@${GITHUB_REPOSITORY_OWNER,,}/"
+               if [[ "$PUBLISH_GITHUB" == 'true' && "$NAME" != "$SCOPE"* ]]; then
+                 echo "::error::GitHub Packages needs the scope $SCOPE, package name is \"$NAME\". Rename the package or set publish-github to false."
+                 exit 1
+               fi
+
+      - name: Install
+        run:  npm ci
+
+      - name: Test
+        run:  npm run test --if-present
+
+      - name: Build
+        run:  npm run build --if-present
+
+      - name: Release
+        id:   release
+        if:   github.ref_name == 'main' || github.ref_name == 'master'
+        uses: DasRed/github-workflows/.github/actions/semantic-release@v2
+        with:
+          github-token:     ${{ github.token }}
+          changelog:        ${{ inputs.changelog }}
+          backmerge-branch: ${{ inputs.backmerge-branch }}
+
+      - name:  Metadata
+        id:    metadata
+        shell: bash
+        env:
+          RELEASED: ${{ steps.release.outputs.released }}
+          VERSION:  ${{ steps.release.outputs.version }}
+        run:   |
+               set -euo pipefail
+
+               NAME=$(node -p "require('./package.json').name")
+
+               echo "package=$NAME" >> "$GITHUB_OUTPUT"
+               echo "released=false" >> "$GITHUB_OUTPUT"
+
+               if [[ "$RELEASED" != 'true' ]]; then
+                 echo "No release in this run"
+                 exit 0
+               fi
+
+               if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                 echo "Not a stable version: $VERSION"
+                 exit 0
+               fi
+
+               {
+                 echo "released=true"
+                 echo "version=$VERSION"
+               } >> "$GITHUB_OUTPUT"
+
+      - name:  Pack
+        id:    pack
+        if:    steps.metadata.outputs.released == 'true'
+        shell: bash
+        run:   |
+               set -euo pipefail
+
+               mkdir -p "$RUNNER_TEMP/package"
+               npm pack --pack-destination "$RUNNER_TEMP/package"
+
+               TARBALL=$(cd "$RUNNER_TEMP/package" && ls -1 *.tgz)
+               echo "tarball=$TARBALL" >> "$GITHUB_OUTPUT"
+
+      - name: Upload Package
+        if:   steps.metadata.outputs.released == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name:              npm-package
+          path:              ${{ runner.temp }}/package/${{ steps.pack.outputs.tarball }}
+          if-no-files-found: error
+          retention-days:    7
+
+  npmjs:
+    name:    Publish to npm
+    runs-on: ubuntu-26.04
+    needs:   publish
+
+    if:      needs.publish.outputs.released == 'true' && inputs.publish-npm
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version:          ${{ inputs.node-version }}
+          package-manager-cache: false
+
+      - name:  Ensure npm Version
+        shell: bash
+        run:   |
+               set -euo pipefail
+
+               # trusted publishing needs npm 11.5.1 or later
+               current=$(npm --version)
+               if [[ "$(printf '%s\n' 11.5.1 "$current" | sort -V | head -n1)" != '11.5.1' ]]; then
+                 echo "npm $current is too old for trusted publishing, installing the latest npm"
+                 npm install --global npm@latest
+               fi
+
+               npm --version
+
+      - name: Download Package
+        uses: actions/download-artifact@v8
+        with:
+          name: npm-package
+          path: ${{ runner.temp }}/package
+
+      - name:  Publish
+        shell: bash
+        env:
+          NAME:     ${{ needs.publish.outputs.package }}
+          VERSION:  ${{ needs.publish.outputs.version }}
+          TARBALL:  ${{ needs.publish.outputs.tarball }}
+          ACCESS:   ${{ inputs.npm-access }}
+          REGISTRY: https://registry.npmjs.org/
+        run:   |
+               set -euo pipefail
+
+               # a re-run must not fail because the version is already there
+               existing=$(npm view "$NAME@$VERSION" version --registry "$REGISTRY" 2>/dev/null || true)
+               if [[ "$existing" == "$VERSION" ]]; then
+                 echo "::notice::$NAME@$VERSION is already on npm, skipping"
+               else
+                 # CLI flags take precedence over publishConfig in package.json,
+                 # publishing a tarball runs no lifecycle scripts (e.g. prepublishOnly)
+                 npm publish "$RUNNER_TEMP/package/$TARBALL" --registry "$REGISTRY" --access "$ACCESS"
+               fi
+
+               {
+                 echo "### npm"
+                 echo ""
+                 echo "[\`$NAME@$VERSION\`](https://www.npmjs.com/package/$NAME/v/$VERSION)"
+               } >> "$GITHUB_STEP_SUMMARY"
+
+  github-packages:
+    name:    Publish to GitHub Packages
+    runs-on: ubuntu-26.04
+    needs:   publish
+
+    if:      needs.publish.outputs.released == 'true' && inputs.publish-github
+
+    permissions:
+      packages: write
+
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version:          ${{ inputs.node-version }}
+          registry-url:          https://npm.pkg.github.com
+          package-manager-cache: false
+
+      - name: Download Package
+        uses: actions/download-artifact@v8
+        with:
+          name: npm-package
+          path: ${{ runner.temp }}/package
+
+      - name:  Publish
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+          NAME:            ${{ needs.publish.outputs.package }}
+          VERSION:         ${{ needs.publish.outputs.version }}
+          TARBALL:         ${{ needs.publish.outputs.tarball }}
+          REGISTRY:        https://npm.pkg.github.com
+        run:   |
+               set -euo pipefail
+
+               # a re-run must not fail because the version is already there
+               existing=$(npm view "$NAME@$VERSION" version --registry "$REGISTRY" 2>/dev/null || true)
+               if [[ "$existing" == "$VERSION" ]]; then
+                 echo "::notice::$NAME@$VERSION is already in GitHub Packages, skipping"
+               else
+                 npm publish "$RUNNER_TEMP/package/$TARBALL" --registry "$REGISTRY"
+               fi
+
+               {
+                 echo "### GitHub Packages"
+                 echo ""
+                 echo "[\`$NAME@$VERSION\`]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/pkgs/npm/${NAME#*/})"
+               } >> "$GITHUB_STEP_SUMMARY"
+
+  notify:
+    name: Notify Home Assistant
+
+    needs: [publish, npmjs, github-packages]
+
+    if: ${{ always() }}
+
+    runs-on: ubuntu-26.04
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Send Notification
+        uses: DasRed/github-workflows/.github/actions/homeassistant-notify@v2
+        with:
+          webhook_url: ${{ secrets.homeassistant-webhook-url }}
+          job_results: ${{ toJSON(needs) }}
+          github_token: ${{ github.token }}

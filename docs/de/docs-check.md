@@ -31,7 +31,7 @@ Die vollständigen Regeln stehen im
 
 ```yaml
 - uses: actions/checkout@v6
-- uses: DasRed/github-workflows/.github/actions/docs-check@v1
+- uses: DasRed/github-workflows/.github/actions/docs-check@v2
 ```
 
 ## Inputs
