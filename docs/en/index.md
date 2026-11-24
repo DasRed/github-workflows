@@ -26,7 +26,8 @@ bring them onto marco-starker.de.
 | [Website Release](website-release.md)                  | action            | Trigger a website release so new docs show up                |
 | [Semantic Release](semantic-release.md)                | action            | Release via semantic-release without setup in the project    |
 
-Next to them lives `.github/workflows/_release.yml`. It releases this repository itself and is not meant to be
+Next to them lives `.github/workflows/_release.yml`. It releases this repository itself, with the
+[Semantic Release](semantic-release.md) action from its own checkout instead of `@v2`, and is not meant to be
 called.
 
 ## Quick start

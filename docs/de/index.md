@@ -26,7 +26,8 @@ und auf marco-starker.de bringen.
 | [Website Release](website-release.md)                  | Action                      | Release der Webseite auslösen, damit neue Doku erscheint   |
 | [Semantic Release](semantic-release.md)                | Action                      | Release per semantic-release ohne Setup im Projekt         |
 
-Daneben liegt `.github/workflows/_release.yml`. Er released dieses Repository selbst und ist nicht zum Aufrufen
+Daneben liegt `.github/workflows/_release.yml`. Er released dieses Repository selbst, mit der Action
+[Semantic Release](semantic-release.md) aus dem eigenen Stand statt `@v2`, und ist nicht zum Aufrufen
 gedacht.
 
 ## Schnellstart
