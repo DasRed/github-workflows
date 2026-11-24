@@ -15,7 +15,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  # the id "publish" is what the Home Assistant notification checks for success
+  publish:
     name: Semantic Release
     runs-on: ubuntu-26.04
 
@@ -69,3 +70,27 @@ jobs:
               echo "### Floating tags" >> "$GITHUB_STEP_SUMMARY"
               echo "" >> "$GITHUB_STEP_SUMMARY"
               echo "\`$major\` and \`$minor\` point to \`v$VERSION\`" >> "$GITHUB_STEP_SUMMARY"
+
+  notify:
+    name: Notify Home Assistant
+
+    needs: [publish]
+
+    if: ${{ always() }}
+
+    runs-on: ubuntu-26.04
+
+    permissions:
+      contents: read
+
+    steps:
+      # the local action needs the repository, like the release above it does not use @v2
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Send Notification
+        uses: ./.github/actions/homeassistant-notify
+        with:
+          webhook_url: ${{ secrets.HOMEASSISTANT_WEBHOOK_URL }}
+          job_results: ${{ toJSON(needs) }}
+          github_token: ${{ github.token }}
